@@ -63,18 +63,18 @@ class Main
 			Sys.setCwd(dir = path);
 		else
 			Sys.setCwd(dir = '$dir/$path'.normalize());
-		Sys.println("cd " + dir);
+		Sys.println("> cd " + dir);
 	}
 	
 	static function cmd(command:String, ?args:Array<String>):Int
 	{
-		Sys.println(command + " " + args != null ? args.join(" ") : "");
+		Sys.println("> " + command + " " + args != null ? args.join(" ") : "");
 		return Sys.command(command, args);
 	}
 	
 	static function readCmd(command:String, ?args:Array<String>):String
 	{
-		Sys.println(command + " " + args != null ? args.join(" ") : "");		
+		Sys.println("> " + command + " " + args != null ? args.join(" ") : "");		
 		var process:Process = null;
 		try
 		{
@@ -119,6 +119,8 @@ class Main
 			return null;
 		}
 		
+		Sys.println(output);
+		
 		return output;
 	}
 	
@@ -148,7 +150,8 @@ class Main
 			return;
 		
 		var buildVersion:Version = getBuildProp("version");
-		var cachedVersion:Version = getVersionProp("semver");
+		var cvString = getVersionProp("semver");
+		var cachedVersion:Version = cvString != "" ? cvString : "0.0.0";
 		if(buildVersion > cachedVersion)
 			rebuildExtension();
 	}
@@ -166,14 +169,14 @@ class Main
 		// out: /home/justin/src/polydes/dist/$id.jar
 		
 		var folderName = new Path(dir).file;
-		var changes = hash != null ?
+		var changes = hash != "" ?
 			readCmd("git", ["log", "--format=\"%s\"", '$hash...HEAD', "--", "\"folderName\""]) :
 			"Initial Repository Version.";
 		
-		cmd("srm", ["add", 'dist/$id.jar', "-c", changes]);
+		cmd("srm", ["add", '$dir/../dist/$id.jar'.normalize(), "-c", changes]);
 		
 		var semver = getBuildProp("version");
-		var hash = readCmd("git", ["log", "-1", "--format=\"%H\""]);
+		var hash = readCmd("git", ["log", "-1", "--format=%H"]);
 		File.saveContent('$dir/.version', 'semver=$semver\nhash=$hash');
 	}
 
@@ -223,9 +226,13 @@ class Main
 			var re = new EReg(pattern, "");
 			
 			for(i in 0...lines.length)
+			{
 				if(re.match(StringTools.trim(lines[i])))
 					return re.matched(1);
+			}
+			trace("no matches");
 		}
+		trace(filename + " doesn't exist");
 		return "";
 	}
 	
