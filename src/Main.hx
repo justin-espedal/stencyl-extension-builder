@@ -63,15 +63,18 @@ class Main
 			Sys.setCwd(dir = path);
 		else
 			Sys.setCwd(dir = '$dir/$path'.normalize());
+		Sys.println("cd " + dir);
 	}
 	
 	static function cmd(command:String, ?args:Array<String>):Int
 	{
+		Sys.println(command + " " + args != null ? args.join(" ") : "");
 		return Sys.command(command, args);
 	}
 	
 	static function readCmd(command:String, ?args:Array<String>):String
 	{
+		Sys.println(command + " " + args != null ? args.join(" ") : "");		
 		var process:Process = null;
 		try
 		{
