@@ -175,9 +175,9 @@ class Main
 	{
 		cmd("git", ["remote", "update"]);
 		
-		var local = readCmd("git", ["rev-parse", "@"]);
-		var remote = readCmd("git", ["rev-parse", "@{u}"]);
-		var base = readCmd("git", ["merge-base", "@", "@{u}"]);
+		var local = readCmd("git", ["rev-parse", "HEAD"]);
+		var remote = readCmd("git", ["rev-parse", "master@{u}"]);
+		var base = readCmd("git", ["merge-base", "HEAD", "master@{u}"]);
 		
 		if(local == remote)
 		{
