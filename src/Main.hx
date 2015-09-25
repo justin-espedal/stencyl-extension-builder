@@ -169,11 +169,13 @@ class Main
 		// out: /home/justin/src/polydes/dist/$id.jar
 		
 		var folderName = new Path(dir).file;
-		var changes = hash != "" ?
-			readCmd("git", ["log", "--format=\"%s\"", '$hash...HEAD', "--", "\"folderName\""]) :
-			"Initial Repository Version.";
 		
-		cmd("srm", ["add", '$dir/../dist/$id.jar'.normalize(), "-c", changes]);
+		if(hash != "")
+			cmd("git", ["log", "--format=\"%s\"", '$hash...HEAD', "--", "\"folderName\"", ">", "changes"]);
+		else
+			File.saveContent('$dir/changes', "Initial Repository Version.");
+		
+		cmd("srm", ["add", '$dir/../dist/$id.jar'.normalize(), '$dir/changes']);
 		
 		var semver = getBuildProp("version");
 		var hash = readCmd("git", ["log", "-1", "--format=%H"]);
