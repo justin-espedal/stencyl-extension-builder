@@ -175,7 +175,7 @@ class Main
 		else
 			File.saveContent('$dir/changes', "Initial Repository Version.");
 		
-		cmd("srm", ["add", '$dir/../dist/$id.jar'.normalize(), '$dir/changes']);
+		cmd("srm", ["add", '$dir/../dist/$id.jar'.normalize(), '"$dir/changes"']);
 		
 		var semver = getBuildProp("version");
 		var hash = readCmd("git", ["log", "-1", "--format=%H"]);
