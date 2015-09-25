@@ -159,7 +159,10 @@ class Main
 		var id=pkg.replace("/", ".");
 		var hash = getVersionProp("hash");
 		
-		cmd("ant", ["-Djenkins=true"]);
+		var args = ["-Djenkins=true"];
+		if(exists("antprops"))
+			args = args.concat(["-propertyfile", "antprops"]);
+		cmd("ant", args);
 		// out: /home/justin/src/polydes/dist/$id.jar
 		
 		var folderName = new Path(dir).file;
