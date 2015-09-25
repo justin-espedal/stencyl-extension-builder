@@ -160,14 +160,9 @@ class Main
 		// out: /home/justin/src/polydes/dist/$id.jar
 		
 		var folderName = new Path(dir).file;
-		var changes = readCmd("git",
-			[
-				"log",
-				"--format=\"%s\"",
-				if(hash != null) '$hash...HEAD' else "",
-				"--",
-				"\"folderName\""
-			]);
+		var changes = hash != null ?
+			readCmd("git", ["log", "--format=\"%s\"", '$hash...HEAD', "--", "\"folderName\""]) :
+			"Initial Repository Version.";
 		
 		cmd("srm", ["add", 'dist/$id.jar', "-c", changes]);
 		
