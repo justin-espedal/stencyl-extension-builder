@@ -1,3 +1,5 @@
+import cmd.Cmd;
+import cmd.Cmd.*;
 import haxe.io.BytesOutput;
 import haxe.io.Eof;
 import haxe.io.Path;
@@ -11,6 +13,16 @@ using haxe.io.Path;
 
 class Main
 {
+	/*-------------------------------------*\
+	 * CMD Binding
+	\*-------------------------------------*/ 
+	
+	static var ant:Dynamic = bindCmd("ant");
+	static var git:Dynamic = bindCmd("git");
+	static var srm:Dynamic = bindCmd("srm");
+	
+	static var gitRead:Dynamic = bindReadCmd("git");
+	
 	/*-------------------------------------*\
 	 * Main
 	\*-------------------------------------*/ 
@@ -38,106 +50,23 @@ class Main
 		
 		cd(props.get("stencylPath"));
 		if(gitConditionalPull())
-			cmd("ant", ["dist-just-jar"]);
+			ant("dist-just-jar");
 			// out: /home/justin/src/stencyl/dist/sw.jar
 		
 		cd(props.get("polydesPath"));
-		cmd("git", ["pull"]);
+		git("pull");
+		
+		//Make sure common is built first.
+		cd("Common");
+		conditionalBuild();
+		cd("..");
+		
 		for(dir in loopFolders())
 		{
 			cd(dir);
 			conditionalBuild();
 			cd("..");
 		}
-	}
-	
-	/*-------------------------------------*\
-	 * CMD interface
-	\*-------------------------------------*/ 
-	
-	static var dir = "";
-	
-	static function cd(path:String)
-	{
-		if(path.isAbsolute())
-			Sys.setCwd(dir = path);
-		else
-			Sys.setCwd(dir = '$dir/$path'.normalize());
-		Sys.println("> cd " + dir);
-	}
-	
-	static function cmd(command:String, ?args:Array<String>):Int
-	{
-		Sys.println("> " + command + " " + args != null ? args.join(" ") : "");
-		return Sys.command(command, args);
-	}
-	
-	static function readCmd(command:String, ?args:Array<String>):String
-	{
-		Sys.println("> " + command + " " + args != null ? args.join(" ") : "");		
-		var process:Process = null;
-		try
-		{
-			process = new Process(command, args);
-		}
-		catch(e:Dynamic)
-		{
-			trace(e);
-			return null;
-		}
-		
-		var buffer = new BytesOutput();
-		
-		var waiting = true;
-		while(waiting)
-		{
-			try
-			{
-				var current = process.stdout.readAll(1024);
-				buffer.write(current);
-				if (current.length == 0)
-				{  
-					waiting = false;
-				}
-			}
-			catch (e:Eof)
-			{
-				waiting = false;
-			}
-		}
-		
-		process.close();
-		
-		var output = buffer.getBytes().toString();
-		if (output == "")
-		{
-			var error = process.stderr.readAll().toString();
-			if (error==null || error=="")
-				error = 'error running $command ${args.join(" ")}';
-			trace(error);
-			
-			return null;
-		}
-		
-		Sys.println(output);
-		
-		return output;
-	}
-	
-	static function loopFolders():Array<String>
-	{
-		return
-			FileSystem.readDirectory(dir)
-			.filter
-			(
-				function(path)
-				{ return FileSystem.isDirectory(path); }
-			);
-	}
-	
-	static function exists(path:String):Bool
-	{
-		return FileSystem.exists('$dir/$path');
 	}
 	
 	/*-------------------------------------*\
@@ -162,33 +91,30 @@ class Main
 		var id=pkg.replace("/", ".");
 		var hash = getVersionProp("hash");
 		
-		var args = ["-Djenkins=true"];
-		if(exists("antprops"))
-			args = args.concat(["-propertyfile", "antprops"]);
-		cmd("ant", args);
+		ant();
 		// out: /home/justin/src/polydes/dist/$id.jar
 		
 		var folderName = new Path(dir).file;
 		
 		if(hash != "")
-			cmd("git", ["log", "--format=\"%s\"", '$hash...HEAD', "--", "\"folderName\"", ">", "changes"]);
+			git("log", "--format=\"%s\"", '$hash...HEAD', "--", "\"folderName\"", ">", "changes");
 		else
 			File.saveContent('$dir/changes', "Initial Repository Version.");
 		
-		cmd("srm", ["add", '$dir/../dist/$id.jar'.normalize(), '"$dir/changes"']);
+		srm("add", '$dir/../dist/$id.jar'.normalize(), '$dir/changes');
 		
 		var semver = getBuildProp("version");
-		var hash = readCmd("git", ["log", "-1", "--format=%H"]);
+		var hash = gitRead("log", "-1", "--format=%H");
 		File.saveContent('$dir/.version', 'semver=$semver\nhash=$hash');
 	}
 
 	static function gitConditionalPull():Bool
 	{
-		cmd("git", ["remote", "update"]);
+		git("remote", "update");
 		
-		var local = readCmd("git", ["rev-parse", "HEAD"]);
-		var remote = readCmd("git", ["rev-parse", "master@{u}"]);
-		var base = readCmd("git", ["merge-base", "HEAD", "master@{u}"]);
+		var local = gitRead("rev-parse", "HEAD");
+		var remote = gitRead("rev-parse", "master@{u}");
+		var base = gitRead("merge-base", "HEAD", "master@{u}");
 		
 		if(local == remote)
 		{
@@ -198,7 +124,7 @@ class Main
 		else if(local == base)
 		{
 			trace("Need to pull");
-			cmd("git", ["pull", "--rebase"]);
+			git("pull", "--rebase");
 			return true;
 		}
 		else if(remote == base)
@@ -209,7 +135,7 @@ class Main
 		else
 		{
 			trace("Diverged");
-			cmd("git", ["pull", "--rebase"]);
+			git("pull", "--rebase");
 			return true;
 		}
 	}
