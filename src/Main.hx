@@ -64,7 +64,8 @@ class Main
 		for(dir in loopFolders())
 		{
 			cd(dir);
-			conditionalBuild();
+			if(!exists("seb-skip"))
+				conditionalBuild();
 			cd("..");
 		}
 	}
