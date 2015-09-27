@@ -180,6 +180,10 @@ class Main
 	
 	static function getConfigFilePath():String
 	{
+		var sebConf = Sys.getEnv("STENCYL_EXTENSION_BUILDER_CONFIG");
+		if(sebConf != null)
+			return sebConf;
+		
 		if(Sys.systemName() == "Windows")
 			return Sys.getEnv("HOMEDRIVE") + Sys.getEnv("HOMEPATH") + "/.stencylbuilder";
 		else
