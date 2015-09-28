@@ -98,7 +98,7 @@ class Main
 		var folderName = new Path(dir).file;
 		
 		if(hash != "")
-			git("log", "--format=%s", '$hash...HEAD', "--", '"$folderName"', ">", "changes");
+			git("log", "--format=%s", '$hash...HEAD', "--", ".", ">", "changes");
 		else
 			File.saveContent('$dir/changes', "Initial Repository Version.");
 		
