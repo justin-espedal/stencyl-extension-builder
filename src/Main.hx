@@ -19,9 +19,7 @@ class Main
 	
 	static var ant:Dynamic = bindCmd("ant");
 	static var git:Dynamic = bindCmd("git");
-	static var srm:Dynamic = bindCmd("srm");
-	
-	static var gitRead:Dynamic = bindReadCmd("git");
+	static var srm:Dynamic = bindCmd("srm", true);
 	
 	/*-------------------------------------*\
 	 * Main
@@ -97,15 +95,19 @@ class Main
 		
 		var folderName = new Path(dir).file;
 		
-		if(hash != "")
-			git("log", "--format=%s", '$hash...HEAD', "--", ".", ">", "changes");
-		else
-			File.saveContent('$dir/changes', "Initial Repository Version.");
+		var output = (hash != "") ?
+			git("log", "--format=%s", '$hash...HEAD', "--", ".").output :
+			"Initial Repository Version.";
+		
+		var notEmpty = function(s) {return s.length > 0;};
+		
+		output = output.split("\n").filter(notEmpty).join("\n");
+		File.saveContent('$dir/changes', output);
 		
 		srm("add", '$dir/../dist/$id.jar'.normalize(), '$dir/changes');
 		
 		var semver = getBuildProp("version");
-		var hash = gitRead("log", "-1", "--format=%H");
+		var hash = git("log", "-1", "--format=%H").output;
 		File.saveContent('$dir/.version', 'semver=$semver\nhash=$hash');
 	}
 
@@ -113,9 +115,9 @@ class Main
 	{
 		git("remote", "update");
 		
-		var local = gitRead("rev-parse", "HEAD");
-		var remote = gitRead("rev-parse", "master@{u}");
-		var base = gitRead("merge-base", "HEAD", "master@{u}");
+		var local = git("rev-parse", "HEAD").output;
+		var remote = git("rev-parse", "master@{u}").output;
+		var base = git("merge-base", "HEAD", "master@{u}").output;
 		
 		if(local == remote)
 		{
