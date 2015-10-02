@@ -1,5 +1,6 @@
 -cp src
 -main Main
 -lib cmd
+-lib hscript
 -lib thx.semver
 -neko stencylbuilder.n

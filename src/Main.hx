@@ -31,85 +31,69 @@ class Main
 		
 		if(args.length > 0 && args[0] == "setup")
 		{
-			var stencylPath = args[1];
-			var polydesPath = args[2];
+			args.shift();
 			
 			File.saveContent
 			(
 				getConfigFilePath(),
-				'stencylPath=$stencylPath\n' +
-				'polydesPath=$polydesPath'
+				"paths:\n" + args.join("\n")
 			);
 			
 			return;
 		}
 		
-		var props = parsePropertiesFile(getConfigFilePath());
-		
-		cd(props.get("stencylPath"));
-		if(gitConditionalPull())
-			ant("dist-just-jar");
-			// out: /home/justin/src/stencyl/dist/sw.jar
-		
-		cd(props.get("polydesPath"));
-		git("pull");
-		
-		//Make sure common is built first.
-		cd("Common");
-		conditionalBuild();
-		cd("..");
-		
-		for(dir in loopFolders())
+		var lines = File.getContent(getConfigFilePath()).split("\n");
+		var paths = [];
+		for(line in lines)
 		{
-			cd(dir);
-			if(!exists("seb-skip"))
-				conditionalBuild();
-			cd("..");
+			var arr:Array<String> = null;
+			
+			switch(line)
+			{
+				case "paths:":
+					arr = paths;
+				case _:
+					arr.push(line);
+			}
 		}
+		
+		var notEmpty = function(s) {return s.length > 0;};
+		
+		for(path in paths)
+		{
+			cd(path);
+			if(exists(".seb"))
+			{
+				var script = File.getContent('$dir/.seb');
+				runSeb(script);
+			}
+		}
+	}
+	
+	static function runSeb(script:String)
+	{
+		var parser = new hscript.Parser();
+		var program = parser.parseString(script);
+		var interp = new hscript.Interp();
+		
+		interp.variables.set("File",File);
+		interp.variables.set("Path",Path);
+		
+		interp.variables.set("dir",dir);
+		interp.variables.set("cd",cd);
+		interp.variables.set("git",git);
+		interp.variables.set("ant",ant);
+		interp.variables.set("srm",srm);
+		
+		interp.variables.set("grep",grep);
+		interp.variables.set("gitConditionalPull",gitConditionalPull);
+		
+		interp.execute(program);
 	}
 	
 	/*-------------------------------------*\
 	 * Operations
 	\*-------------------------------------*/ 
-	
-	static function conditionalBuild()
-	{
-		if(!exists("build.xml"))
-			return;
-		
-		var buildVersion:Version = getBuildProp("version");
-		var cvString = getVersionProp("semver");
-		var cachedVersion:Version = cvString != "" ? cvString : "0.0.0";
-		if(buildVersion > cachedVersion)
-			rebuildExtension();
-	}
-
-	static function rebuildExtension()
-	{
-		var pkg=getBuildProp("pkg");
-		var id=pkg.replace("/", ".");
-		var hash = getVersionProp("hash");
-		
-		ant();
-		// out: /home/justin/src/polydes/dist/$id.jar
-		
-		var folderName = new Path(dir).file;
-		
-		var output = (hash != "") ?
-			git("log", "--format=%s", '$hash...HEAD', "--", ".").output :
-			"Initial Repository Version.";
-		
-		var notEmpty = function(s) {return s.length > 0;};
-		
-		output = output.split("\n").filter(notEmpty).join("\n");
-		File.saveContent('$dir/changes', output);
-		
-		srm("add", '$dir/../dist/$id.jar'.normalize(), '$dir/changes');
-		
-		var semver = getBuildProp("version");
-		var hash = git("log", "-1", "--format=%H").output;
-		File.saveContent('$dir/.version', 'semver=$semver\nhash=$hash');
-	}
 
 	static function gitConditionalPull():Bool
 	{
@@ -167,16 +151,6 @@ class Main
 		return "";
 	}
 	
-	static function getBuildProp(propertyName:String):String
-	{
-		return grep("build.xml", 'property name="$propertyName" value="(.*)"');
-	}
-
-	static function getVersionProp(propertyName:String):String
-	{
-		return grep(".version", '$propertyName=(.*)');
-	}
-	
 	/*-------------------------------------*\
 	 * Paths
 	\*-------------------------------------*/ 
@@ -188,9 +162,9 @@ class Main
 			return sebConf;
 		
 		if(Sys.systemName() == "Windows")
-			return Sys.getEnv("HOMEDRIVE") + Sys.getEnv("HOMEPATH") + "/.stencylbuilder";
+			return Sys.getEnv("HOMEDRIVE") + Sys.getEnv("HOMEPATH") + "/.seb_config";
 		else
-			return Sys.getEnv("HOME") + "/.stencylbuilder";
+			return Sys.getEnv("HOME") + "/.seb_config";
 	}
 	
 	/*-------------------------------------*\
