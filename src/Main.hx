@@ -1,8 +1,13 @@
 import cmd.Cmd;
 import cmd.Cmd.*;
+import haxe.crypto.Crc32;
+import haxe.io.Bytes;
 import haxe.io.BytesOutput;
 import haxe.io.Eof;
 import haxe.io.Path;
+import haxe.zip.Entry;
+import haxe.zip.Reader;
+import haxe.zip.Writer;
 import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
@@ -78,6 +83,7 @@ class Main
 		
 		interp.variables.set("File",File);
 		interp.variables.set("Path",Path);
+		interp.variables.set("asVersion",Version.stringToVersion);
 		
 		interp.variables.set("dir",dir);
 		interp.variables.set("cd",cd);
@@ -86,6 +92,8 @@ class Main
 		interp.variables.set("srm",srm);
 		
 		interp.variables.set("grep",grep);
+		interp.variables.set("zipFile",zipFile);
+		interp.variables.set("zipFolder",zipFolder);
 		interp.variables.set("gitConditionalPull",gitConditionalPull);
 		
 		interp.execute(program);
@@ -214,5 +222,76 @@ class Main
 			ofs = endl + 1;
 		}
 		return map;
+	}
+	
+	/*-------------------------------------*\
+	 * Zip Files
+	\*-------------------------------------*/ 
+	
+	static function zipFolder(path:String, out:String):Void
+	{
+		var zipdata = new List<Entry>();
+		for(filename in FileSystem.readDirectory(path))
+			addEntries('$path/$filename', "", zipdata);
+		
+		var output = File.write(out);
+		var zipWriter = new Writer(output);
+		zipWriter.write(zipdata);
+		output.close();
+	}
+	
+	static function zipFile(path:String, out:String):Void
+	{
+		var zipdata = new List<Entry>();
+		addEntries(path, "", zipdata);
+		
+		var output = File.write(out);
+		var zipWriter = new Writer(output);
+		zipWriter.write(zipdata);
+		output.close();
+	}
+	
+	static function addEntries(path:String, prefix:String, entries:List<Entry>):Void
+	{
+		var fpath = new Path(path);
+		var filename = fpath.file;
+		if(fpath.ext != null)
+			filename += '.${fpath.ext}';
+		
+		if(FileSystem.isDirectory(path))
+		{
+			entries.add({
+				fileName : prefix + filename,
+				fileSize : 0, 
+				fileTime : Date.now(), 
+				compressed : false, 
+				dataSize : 0,
+				data : null,
+				crc32 : 0,
+				extraFields : new List()
+			});
+			
+			for(file in FileSystem.readDirectory(path))
+				addEntries(file, '$prefix/filename', entries);
+		}
+		else
+		{
+			var data = File.getBytes(path);
+			
+			var entry = {
+				fileName : prefix + filename,
+				fileSize : data.length, 
+				fileTime : Date.now(), 
+				compressed : false, 
+				dataSize : data.length,
+				data : data,
+				crc32 : Crc32.make(data),
+				extraFields : new List()
+			};
+			
+			haxe.zip.Tools.compress(entry, 4);
+			
+			entries.add(entry);
+		}
 	}
 }
