@@ -49,10 +49,10 @@ class Main
 		
 		var lines = File.getContent(getConfigFilePath()).split("\n");
 		var paths = [];
+		var arr:Array<String> = null;
+		
 		for(line in lines)
 		{
-			var arr:Array<String> = null;
-			
 			switch(line)
 			{
 				case "paths:":
@@ -77,15 +77,30 @@ class Main
 	
 	static function runSeb(script:String)
 	{
-		var parser = new hscript.Parser();
-		var program = parser.parseString(script);
+		var parser:hscript.Parser = null;
+		var program:hscript.Expr = null;
+		
+		try
+		{
+			parser = new hscript.Parser();
+			parser.allowTypes = true;
+			program = parser.parseString(script);
+		}
+		catch(error:hscript.Expr.Error)
+		{
+			trace(error);
+			trace("at line " + parser.line);
+			return;
+		}
+		
 		var interp = new hscript.Interp();
 		
 		interp.variables.set("File",File);
 		interp.variables.set("Path",Path);
-		interp.variables.set("asVersion",Version.stringToVersion);
+		interp.variables.set("StringTools",StringTools);
+		interp.variables.set("compareVersions",compareVersions);
 		
-		interp.variables.set("dir",dir);
+		interp.variables.set("dir",function() return dir);
 		interp.variables.set("cd",cd);
 		interp.variables.set("git",git);
 		interp.variables.set("ant",ant);
@@ -141,6 +156,7 @@ class Main
 	
 	static function grep(filename:String, pattern:String):String
 	{
+		Sys.print('> grep $filename //$pattern// ... ');
 		if(exists(filename))
 		{
 			var content = File.getContent('$dir/$filename');
@@ -151,12 +167,32 @@ class Main
 			for(i in 0...lines.length)
 			{
 				if(re.match(StringTools.trim(lines[i])))
-					return re.matched(1);
+				{
+					var result = re.matched(1);
+					Sys.println(result);
+					return result;
+				}
 			}
-			trace("no matches");
+			Sys.println("no matches");
 		}
-		trace(filename + " doesn't exist");
+		else
+		{
+			Sys.println(filename + " doesn't exist");
+		}
 		return "";
+	}
+	
+	static function compareVersions(v1:String, v2:String):Int
+	{
+		var ver1:Version = v1;
+		var ver2:Version = v2;
+		
+		if(v1 < v2)
+			return -1;
+		else if(v1 == v2)
+			return 0;
+		else
+			return 1;
 	}
 	
 	/*-------------------------------------*\
