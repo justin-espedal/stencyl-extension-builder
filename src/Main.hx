@@ -24,7 +24,7 @@ class Main
 	
 	static var ant:Dynamic = bindCmd("ant");
 	static var git:Dynamic = bindCmd("git");
-	static var srm:Dynamic = bindCmd("srm", true);
+	static var srm:Dynamic = bindCmd("srm");
 	
 	/*-------------------------------------*\
 	 * Main
